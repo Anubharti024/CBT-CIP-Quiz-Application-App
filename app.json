@@ -1,10 +1,15 @@
 {
   "expo": {
-    "name": "QuizApplication",
-    "slug": "QuizApplication",
+    "name": "Quizzy",
+    "slug": "My-Quiz-Application",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "green"
+    },
     "scheme": "quizapplication",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,11 +17,9 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.anubharti.quizapplication",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#E6F4FE"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -43,6 +46,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d79411f1-5c0a-4b0c-a094-98b60eaedb5d"
+      }
     }
   }
 }

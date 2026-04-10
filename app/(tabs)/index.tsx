@@ -1,98 +1,263 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import { Image, Text, TouchableOpacity, View } from "react-native";
+import questionBank from "../data/questionBank";
+import styles from "../styles/styles";
+const successImg = require("../../assets/images/congratulation.png");
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const QUIZ_TIME = 10;
+
+type Question = {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+};
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
+  const [screen, setScreen] = useState<"config" | "quiz" | "result">("config");
+
+  const [category, setCategory] = useState<string>("Programming");
+  const [questionLimit, setQuestionLimit] = useState<number>(5);
+
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [history, setHistory] = useState<number[]>([]);
+
+  const [score, setScore] = useState<number>(0);
+  const [time, setTime] = useState<number>(QUIZ_TIME);
+
+  const [selected, setSelected] = useState<number | null>(null);
+  const [showNext, setShowNext] = useState<boolean>(false);
+
+  // ================= TIMER =================
+  useEffect(() => {
+    if (screen !== "quiz") return;
+
+    if (time === 0) {
+      setShowNext(true);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTime((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [time, screen]);
+
+  // ================= GET RANDOM QUESTION =================
+  const getRandomQuestion = (): Question | null => {
+    const categoryData = questionBank.find(
+      (c) => c.category.toLowerCase() === category.toLowerCase()
+    );
+
+    const allQuestions: Question[] = categoryData?.questions || [];
+
+    if (history.length >= Math.min(questionLimit, allQuestions.length)) {
+      setScreen("result");
+      return null;
+    }
+
+    const available = allQuestions.filter(
+      (_, i) => !history.includes(i)
+    );
+
+    const random =
+      available[Math.floor(Math.random() * available.length)];
+
+    const originalIndex = allQuestions.indexOf(random);
+
+    setHistory((prev) => [...prev, originalIndex]);
+
+    return random;
+  };
+
+  // ================= LOAD QUESTION =================
+  const loadQuestion = () => {
+    const q = getRandomQuestion();
+    if (!q) return;
+
+    setQuestions([q]);
+    setSelected(null);
+    setShowNext(false);
+    setTime(QUIZ_TIME);
+  };
+
+  // ================= START QUIZ =================
+  const startQuiz = () => {
+    setScreen("quiz");
+    setScore(0);
+    setHistory([]);
+    loadQuestion();
+  };
+
+  // ================= HANDLE ANSWER =================
+  const handleAnswer = (i: number) => {
+    if (showNext) return;
+
+    const correctIndex = questions[0].correctAnswer;
+
+    setSelected(i);
+    setShowNext(true);
+
+    if (i === correctIndex) {
+      setScore((prev) => prev + 1);
+    }
+  };
+
+  // ================= NEXT =================
+  const next = () => {
+    loadQuestion();
+  };
+
+  // ================= RESET =================
+  const resetQuiz = () => {
+    setScreen("config");
+    setScore(0);
+    setHistory([]);
+    setSelected(null);
+    setShowNext(false);
+    setTime(QUIZ_TIME);
+  };
+
+  // ================= UI =================
+
+  // -------- CONFIG SCREEN --------
+  if (screen === "config") {
+    return (
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.title}>Quiz Application</Text>
+
+          {/* CATEGORY */}
+          <Text style={styles.categoryText}>Select Category</Text>
+          {["Programming", "General-Knowledge", "Sports", "Entertainment"].map(
+            (cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.option,
+                  category === cat && { backgroundColor: "#1d7b72" },
+                ]}
+                onPress={() => setCategory(cat)}
+              >
+                <Text style={styles.optionText}>{cat}</Text>
+              </TouchableOpacity>
+            )
+          )}
+
+          {/* QUESTION COUNT */}
+          <Text style={styles.categoryText}>Select Questions</Text>
+          {[5, 10, 15].map((num) => (
+            <TouchableOpacity
+              key={num}
+              style={[
+                styles.option,
+                questionLimit === num && { backgroundColor: "#56691a" },
+              ]}
+              onPress={() => setQuestionLimit(num)}
+            >
+              <Text style={styles.optionText}>{num} Questions</Text>
+            </TouchableOpacity>
+          ))}
+
+          <TouchableOpacity style={styles.button} onPress={startQuiz}>
+            <Text style={styles.buttonText}>Start Quiz</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // -------- QUIZ SCREEN --------
+  if (screen === "quiz") {
+    const q = questions[0];
+    if (!q) return null;
+
+    return (
+      <View style={styles.container}>
+        <View style={styles.card}>
+
+          {/* TIMER */}
+          <Text style={[styles.timer, time <= 3 && { color: "red" }]}>
+            {time}s
+          </Text>
+
+          {/* PROGRESS */}
+          <Text style={styles.progressText}>
+            {history.length} / {questionLimit}
+          </Text>
+
+          <View style={styles.progressBar}>
+            <View
+              style={{
+                height: 8,
+                width: `${(history.length / questionLimit) * 100}%`,
+                backgroundColor: "#7c3aed",
+                borderRadius: 10,
+              }}
             />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+          </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+          {/* QUESTION */}
+          <Text style={styles.title}>{q.question}</Text>
+
+          {/* OPTIONS */}
+          {q.options.map((opt, i) => {
+            const correctIndex = q.correctAnswer;
+
+            const style = [
+              styles.option,
+              showNext && i === correctIndex ? styles.correct : null,
+              showNext &&
+                i === selected &&
+                i !== correctIndex
+                ? styles.incorrect
+                : null,
+            ].filter(Boolean);
+
+            return (
+              <TouchableOpacity
+                key={i}
+                style={style}
+                onPress={() => handleAnswer(i)}
+                disabled={showNext}
+              >
+                <Text style={styles.optionText}>{opt}</Text>
+              </TouchableOpacity>
+            );
+          })}
+
+          {/* NEXT BUTTON */}
+          {showNext && (
+            <TouchableOpacity style={styles.button} onPress={next}>
+              <Text style={styles.buttonText}>Next</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // -------- RESULT SCREEN --------
+  if (screen === "result") {
+    return (
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <Image
+            source={successImg}
+            style={styles.resultImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>Quiz Completed 🎉</Text>
+
+          <Text style={styles.optionText}>
+            Score: {score} / {questionLimit}
+          </Text>
+
+          <TouchableOpacity style={styles.button} onPress={resetQuiz}>
+            <Text style={styles.buttonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
